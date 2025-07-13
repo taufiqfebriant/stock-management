@@ -4,7 +4,7 @@ import { Input } from "app/components/ui/input";
 import { Label } from "app/components/ui/label";
 import { eq } from "drizzle-orm";
 import { useState } from "react";
-import { Form, Link, redirect } from "react-router";
+import { Link, redirect, useFetcher } from "react-router";
 import { db } from "../../db";
 import { inventoryLots, purchaseOrderItems, purchaseOrders } from "../../db/schema";
 import type { Route } from "./+types/lots";
@@ -96,6 +96,7 @@ interface Lot {
 
 export default function InventoryLots({ loaderData, actionData }: Route.ComponentProps) {
   const { order, items } = loaderData;
+  const fetcher = useFetcher();
 
   const [lots, setLots] = useState<Record<number, Lot[]>>(() => {
     const initialLots: Record<number, Lot[]> = {};
@@ -151,6 +152,7 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
   };
 
   const validationErrors = validateQuantities();
+  const isSubmitting = fetcher.state !== "idle";
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -177,7 +179,7 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
             </div>
           )}
 
-          <Form method="post" className="space-y-8">
+          <fetcher.Form method="post" className="space-y-8">
             {items.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
@@ -197,7 +199,7 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
                         </span>
                       </CardDescription>
                     </div>
-                    <Button type="button" onClick={() => addLot(item.id)} size="sm">
+                    <Button type="button" onClick={() => addLot(item.id)} size="sm" disabled={isSubmitting}>
                       Add Lot
                     </Button>
                   </div>
@@ -214,6 +216,7 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
                             onChange={(e) => updateLot(item.id, lotIndex, "lotNumber", e.target.value)}
                             placeholder="e.g., LOT-2024-001"
                             className="mt-2"
+                            disabled={isSubmitting}
                           />
                         </div>
                         <div className="w-32">
@@ -225,6 +228,7 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
                             min="0"
                             placeholder="0"
                             className="mt-2"
+                            disabled={isSubmitting}
                           />
                         </div>
                         {(lots[item.id] || []).length > 1 && (
@@ -233,6 +237,7 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
                             variant="destructive"
                             size="sm"
                             onClick={() => removeLot(item.id, lotIndex)}
+                            disabled={isSubmitting}
                           >
                             Remove
                           </Button>
@@ -248,13 +253,15 @@ export default function InventoryLots({ loaderData, actionData }: Route.Componen
 
             <div className="flex justify-end space-x-3">
               <Link to={`/purchase-orders/${order.id}`}>
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" disabled={isSubmitting}>
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit">Save Lot Numbers</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Lot Numbers"}
+              </Button>
             </div>
-          </Form>
+          </fetcher.Form>
         </CardContent>
       </Card>
     </div>

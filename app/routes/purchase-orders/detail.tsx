@@ -2,7 +2,7 @@ import { Button } from "app/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "app/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "app/components/ui/table";
 import { eq } from "drizzle-orm";
-import { Form, Link, redirect } from "react-router";
+import { Link, redirect, useFetcher } from "react-router";
 import { Badge } from "../../components/ui/badge";
 import { db } from "../../db";
 import { inventoryLots, purchaseOrderItems, purchaseOrders } from "../../db/schema";
@@ -104,10 +104,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export default function PurchaseOrderDetail({ loaderData, actionData }: Route.ComponentProps) {
   const { order, items, allQuantitiesMatch, hasLots } = loaderData;
+  const fetcher = useFetcher();
 
   const canApprove = order.status === "pending_approval";
   const canReject = order.status === "pending_approval";
   const canMarkReceived = order.status === "pending_receive" && allQuantitiesMatch && hasLots;
+
+  const isSubmitting = fetcher.state !== "idle";
+  const submittingAction = fetcher.formData?.get("action");
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -148,24 +152,30 @@ export default function PurchaseOrderDetail({ loaderData, actionData }: Route.Co
               <CardContent>
                 <div className="flex space-x-3">
                   {canApprove && (
-                    <Form method="post" className="inline">
+                    <fetcher.Form method="post" className="inline">
                       <input type="hidden" name="action" value="approve" />
-                      <Button type="submit">Approve</Button>
-                    </Form>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && submittingAction === "approve" ? "Approving..." : "Approve"}
+                      </Button>
+                    </fetcher.Form>
                   )}
                   {canReject && (
-                    <Form method="post" className="inline">
+                    <fetcher.Form method="post" className="inline">
                       <input type="hidden" name="action" value="reject" />
-                      <Button type="submit" variant="destructive">
-                        Reject
+                      <Button type="submit" variant="destructive" disabled={isSubmitting}>
+                        {isSubmitting && submittingAction === "reject" ? "Rejecting..." : "Reject"}
                       </Button>
-                    </Form>
+                    </fetcher.Form>
                   )}
                   {canMarkReceived && (
-                    <Form method="post" className="inline">
+                    <fetcher.Form method="post" className="inline">
                       <input type="hidden" name="action" value="mark_received" />
-                      <Button type="submit">Mark as Received</Button>
-                    </Form>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && submittingAction === "mark_received"
+                          ? "Marking as Received..."
+                          : "Mark as Received"}
+                      </Button>
+                    </fetcher.Form>
                   )}
                   {order.status === "pending_receive" && (
                     <Link to={`/purchase-orders/${order.id}/lots`}>
